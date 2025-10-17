@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${product.name} + ' Reviews'"></title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Simple star rating CSS for visual feedback */
+        .star-rating input { display: none; }
+        .star-rating label { font-size: 2rem; color: #ccc; cursor: pointer; }
+        .star-rating input:checked ~ label { color: #f7b731; }
+        .star-rating label:hover,
+        .star-rating label:hover ~ label { color: #f7b731; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+<header class="bg-white shadow-md">
+    <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+        <a th:href="@{/products}" class="text-xl font-bold text-gray-800">ReviewSystem</a>
+        <div class="flex items-center space-x-4">
+            <span sec:authentication="name" class="text-gray-600 font-medium"></span>
+            <a th:href="@{/admin/reviews}" sec:authorize="hasRole('ADMIN')" class="text-red-500 hover:text-red-700">Admin Dashboard</a>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded transition duration-150">Logout</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container mx-auto px-6 py-8">
+    <div th:if="${successMessage}" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4" role="alert">
+        <p th:text="${successMessage}"></p>
+    </div>
+    <div th:if="${errorMessage}" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <div class="bg-white p-8 rounded-lg shadow-lg mb-8">
+        <div class="flex flex-col md:flex-row gap-8">
+            <div class="md:w-1/3">
+                <img th:src="@{/images/default-product.png}" alt="Product Image" class="w-full h-auto object-cover rounded-lg border">
+                <p class="text-center text-sm text-gray-500 mt-2">Default Image Placeholder</p>
+            </div>
+
+            <div class="md:w-2/3">
+                <h1 class="text-4xl font-extrabold text-gray-800 mb-2" th:text="${product.name}">Product Name</h1>
+                <p class="text-xl font-semibold text-blue-600 mb-4">⭐ 0.0 Average Rating (0 Reviews)</p>
+                <p class="text-gray-600 mb-6" th:text="${product.description}">Product description...</p>
+
+                <a href="#review-form" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                    Write a Review
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <section id="reviews" class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">Customer Reviews</h2>
+
+        <p class="text-gray-500">No reviews have been submitted yet. Be the first to review this product!</p>
+
+    </section>
+
+    <section id="review-form" class="bg-white p-8 rounded-lg shadow-lg">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6">Submit Your Review</h2>
+
+        <form th:action="@{/products/{id}/submit-review(id=${product.id})}" method="post" th:object="${reviewFormDTO}" enctype="multipart/form-data">
+
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Your Rating (1-5 Stars)</label>
+                <div class="star-rating flex flex-row-reverse justify-end">
+                    <input type="radio" id="star5" th:field="*{rating}" value="5"><label for="star5" title="5 stars">★</label>
+                    <input type="radio" id="star4" th:field="*{rating}" value="4"><label for="star4" title="4 stars">★</label>
+                    <input type="radio" id="star3" th:field="*{rating}" value="3"><label for="star3" title="3 stars">★</label>
+                    <input type="radio" id="star2" th:field="*{rating}" value="2"><label for="star2" title="2 stars">★</label>
+                    <input type="radio" id="star1" th:field="*{rating}" value="1"><label for="star1" title="1 star">★</label>
+                </div>
+                <p th:if="${#fields.hasErrors('rating')}" th:errors="*{rating}" class="text-red-500 text-xs italic mt-1"></p>
+            </div>
+
+            <div class="mb-4">
+                <label for="comment" class="block text-gray-700 text-sm font-bold mb-2">Comment</label>
+                <textarea id="comment" th:field="*{comment}" rows="4" placeholder="Share your experience with this product..."
+                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <p th:if="${#fields.hasErrors('comment')}" th:errors="*{comment}" class="text-red-500 text-xs italic mt-1"></p>
+            </div>
+
+            <div class="mb-6">
+                <label for="imageFile" class="block text-gray-700 text-sm font-bold mb-2">Upload Optional Image</label>
+                <input type="file" id="imageFile" th:field="*{imageFile}" accept="image/*"
+                       class="w-full text-gray-700">
+                <p class="text-xs text-gray-500 mt-1">Max file size: 10MB</p>
+            </div>
+
+            <input type="hidden" th:field="*{productId}">
+
+            <div class="flex items-center justify-end">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+                    Post Review
+                </button>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>
