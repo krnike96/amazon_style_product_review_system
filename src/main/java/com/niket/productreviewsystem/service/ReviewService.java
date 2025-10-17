@@ -1,6 +1,8 @@
 package com.niket.productreviewsystem.service;
 
 import com.niket.productreviewsystem.model.Review;
+import com.niket.productreviewsystem.model.Product;
+import com.niket.productreviewsystem.model.Review;
 import com.niket.productreviewsystem.model.ReviewFormDTO;
 import com.niket.productreviewsystem.model.User;
 import com.niket.productreviewsystem.repository.ProductRepository;
@@ -17,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 public class ReviewService {
@@ -84,5 +87,39 @@ public class ReviewService {
 
         // 4. Save the review entity
         reviewRepository.save(review);
+    }
+
+    public List<Review> getReviewsByProductId(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        List<Review> reviews = product.getReviews();
+        // Sort reviews by date descending (newest first)
+        reviews.sort((r1, r2) -> r2.getReviewDate().compareTo(r1.getReviewDate()));
+
+        return reviews;
+    }
+
+    /**
+     * Calculates the average rating for a product.
+     */
+    public double getAverageRating(Long productId) {
+        // Use repository method for efficient count/average calculation in a large system
+        // For now, rely on fetched list to simplify (or we could use JPA query method below)
+        List<Review> reviews = getReviewsByProductId(productId);
+        if (reviews.isEmpty()) {
+            return 0.0;
+        }
+
+        double sum = reviews.stream().mapToInt(Review::getRating).sum();
+        // Return rounded average to one decimal place
+        return Math.round((sum / reviews.size()) * 10.0) / 10.0;
+    }
+
+    /**
+     * Calculates the count of reviews for a product.
+     */
+    public long getReviewCount(Long productId) {
+        return reviewRepository.countByProductId(productId);
     }
 }
