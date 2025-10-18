@@ -10,6 +10,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -31,6 +32,7 @@ public class DataLoader {
 
     // Executes after the application context is initialized
     @PostConstruct
+    @Transactional
     public void init() {
         // 1. Create Roles if they don't exist
         if (roleRepository.findByName(Role.RoleName.ROLE_ADMIN).isEmpty()) {
