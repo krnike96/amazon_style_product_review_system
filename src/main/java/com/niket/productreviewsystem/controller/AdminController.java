@@ -1,7 +1,9 @@
 package com.niket.productreviewsystem.controller;
 
 import com.niket.productreviewsystem.model.Review;
+import com.niket.productreviewsystem.model.Product;
 import com.niket.productreviewsystem.service.AdminService;
+import com.niket.productreviewsystem.service.ProductAdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -10,18 +12,22 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
 @Controller
 @RequestMapping("/admin")
-// Ensure this controller's methods can only be executed by users with ROLE_ADMIN
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private ProductAdminService productAdminService;
 
     // 1. Display the moderation dashboard
     @GetMapping("/reviews")
@@ -54,5 +60,59 @@ public class AdminController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/reviews";
+    }
+
+    // 1. List all products
+    @GetMapping("/products")
+    public String listProducts(Model model) {
+        List<Product> products = productAdminService.findAll();
+        model.addAttribute("products", products);
+        return "admin/product-list";
+    }
+
+    // 2. Display product creation/edit form
+    @GetMapping("/products/form")
+    public String productForm(@RequestParam(required = false) Long id, Model model) {
+        Product product = new Product();
+        if (id != null) {
+            product = productAdminService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+        }
+        model.addAttribute("product", product);
+        return "admin/product-form";
+    }
+
+    // 3. Handle product save/update
+    @PostMapping("/products/save")
+    public String saveProduct(Product product,
+                              @RequestParam("file") MultipartFile file,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            // If the ID exists and the file is empty, retain the old image path
+            if (product.getId() != null && file.isEmpty()) {
+                Product existingProduct = productAdminService.findById(product.getId()).orElse(null);
+                if (existingProduct != null) {
+                    product.setImagePath(existingProduct.getImagePath());
+                }
+            }
+
+            productAdminService.saveProduct(product, file);
+            redirectAttributes.addFlashAttribute("successMessage", "Product saved successfully!");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error saving product: " + e.getMessage());
+        }
+        return "redirect:/admin/products";
+    }
+
+    // 4. Delete a product
+    @PostMapping("/products/delete/{id}")
+    public String deleteProduct(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            productAdminService.deleteProduct(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Product ID " + id + " deleted successfully!");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error deleting product: " + e.getMessage());
+        }
+        return "redirect:/admin/products";
     }
 }
