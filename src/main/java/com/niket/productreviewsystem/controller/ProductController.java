@@ -13,6 +13,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.niket.productreviewsystem.service.ReviewReportService;
 
 import java.util.List;
 
@@ -25,6 +26,9 @@ public class ProductController {
 
     @Autowired
     private ReviewService reviewService; // Review Service for business logic
+
+    @Autowired
+    private ReviewReportService reportService;
 
     // Handles GET request for product list (now just "/")
     @GetMapping({"", "/"})
@@ -104,5 +108,21 @@ public class ProductController {
         }
         // Redirect back to the product detail page, retaining the sort order
         return "redirect:/products/" + productId + "?sort=" + sort;
+    }
+
+    @PostMapping("/reviews/report/{reviewId}")
+    public String reportReview(@PathVariable Long reviewId,
+                               @RequestParam String reason,
+                               @RequestParam(required = false) String otherReason, // NEW OPTIONAL PARAMETER
+                               @RequestParam Long productId,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            // PASS THE NEW PARAMETER
+            reportService.submitReport(reviewId, reason, otherReason);
+            redirectAttributes.addFlashAttribute("successMessage", "Review reported successfully. An admin will review it shortly.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/products/" + productId;
     }
 }

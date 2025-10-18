@@ -13,7 +13,10 @@
         <a th:href="@{/products}" class="text-xl font-bold text-white">ReviewSystem (Admin)</a>
         <div class="flex items-center space-x-4">
             <span sec:authentication="name" class="text-white font-medium"></span>
-            <a th:href="@{/products}" class="text-white hover:text-gray-200">View Products</a>
+            <a th:href="@{/admin/reports}" class="text-white hover:text-gray-200">Pending Reports</a>
+            <a th:href="@{/admin/reviews}" class="text-white hover:text-gray-200">Review Moderation</a>
+            <a th:href="@{/admin/products}" class="text-white hover:text-gray-200">Product Management</a>
+            <a th:href="@{/products}" class="text-white hover:text-gray-200">View Public Site</a>
             <form th:action="@{/logout}" method="post">
                 <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-medium py-1 px-3 rounded transition duration-150">Logout</button>
             </form>
