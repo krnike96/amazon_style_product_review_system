@@ -4,6 +4,8 @@ import com.niket.productreviewsystem.model.Review;
 import com.niket.productreviewsystem.model.Product;
 import com.niket.productreviewsystem.service.AdminService;
 import com.niket.productreviewsystem.service.ProductAdminService;
+import com.niket.productreviewsystem.model.ReviewReport;
+import com.niket.productreviewsystem.service.ReviewReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -28,6 +30,9 @@ public class AdminController {
 
     @Autowired
     private ProductAdminService productAdminService;
+
+    @Autowired
+    private ReviewReportService reportService;
 
     // 1. Display the moderation dashboard
     @GetMapping("/reviews")
@@ -114,5 +119,36 @@ public class AdminController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error deleting product: " + e.getMessage());
         }
         return "redirect:/admin/products";
+    }
+
+    // 1. Display the pending reports dashboard (NEW)
+    @GetMapping("/reports")
+    public String reportDashboard(Model model) {
+        List<ReviewReport> pendingReports = reportService.getPendingReports();
+        model.addAttribute("reports", pendingReports);
+        return "admin/report-dashboard"; // Look for template here
+    }
+
+    // 2. Mark a report as processed (NEW)
+    // NOTE: Actual review deletion (rejection) is handled by the existing /reviews/reject/{reviewId} endpoint.
+    @PostMapping("/reports/process/{reportId}")
+    public String processReport(@PathVariable Long reportId,
+                                @RequestParam(required = false, defaultValue = "false") Boolean deleteReview, // Optional parameter
+                                RedirectAttributes redirectAttributes) {
+        try {
+            ReviewReport report = reportService.markReportAsProcessed(reportId);
+
+            // If the admin decides to delete the review that was reported:
+            if (deleteReview) {
+                // Use the existing deletion service (AdminService)
+                adminService.moderateReview(report.getReview().getId(), false); // false = reject/delete
+                redirectAttributes.addFlashAttribute("successMessage", "Report ID " + reportId + " processed and Review ID " + report.getReview().getId() + " was deleted.");
+            } else {
+                redirectAttributes.addFlashAttribute("successMessage", "Report ID " + reportId + " processed (Review retained).");
+            }
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/reports";
     }
 }
