@@ -1,14 +1,15 @@
 package com.niket.productreviewsystem.controller;
 
 import com.niket.productreviewsystem.model.Product;
-import com.niket.productreviewsystem.model.ReviewFormDTO; // New DTO import
+import com.niket.productreviewsystem.model.Review;
+import com.niket.productreviewsystem.model.ReviewFormDTO;
 import com.niket.productreviewsystem.repository.ProductRepository;
-import com.niket.productreviewsystem.service.ReviewService; // New Service import
-import jakarta.validation.Valid; // New validation import
+import com.niket.productreviewsystem.service.ReviewService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult; // New validation import
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -38,15 +39,23 @@ public class ProductController {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
+        // 1. Fetch data from service
+        List<Review> reviews = reviewService.getReviewsByProductId(productId);
+        double averageRating = reviewService.getAverageRating(productId);
+        long reviewCount = reviews.size();
+
+        // 2. Add data to model
         model.addAttribute("product", product);
-        // Pass a new, empty DTO for the form
+        model.addAttribute("reviews", reviews);
+        model.addAttribute("averageRating", averageRating);
+        model.addAttribute("reviewCount", reviewCount);
+
+        // 3. Prepare DTO for form submission
         if (!model.containsAttribute("reviewFormDTO")) {
             ReviewFormDTO dto = new ReviewFormDTO();
             dto.setProductId(productId);
             model.addAttribute("reviewFormDTO", dto);
         }
-
-        // TODO: In later phases, fetch and display actual reviews here
 
         return "product-detail";
     }
