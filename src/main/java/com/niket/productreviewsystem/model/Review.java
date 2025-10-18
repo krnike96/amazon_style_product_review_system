@@ -36,4 +36,15 @@ public class Review {
 
     // Simulated requirement: to show "Verified Purchase" badge
     private boolean verifiedPurchase = false;
+
+    @Column(name = "helpful_votes", nullable = false)
+    private int helpfulVotes = 0;
+
+    public int getHelpfulVotes() {
+        return helpfulVotes;
+    }
+
+    public void setHelpfulVotes(int helpfulVotes) {
+        this.helpfulVotes = helpfulVotes;
+    }
 }

@@ -68,6 +68,18 @@
 
     <p th:if="${reviews.isEmpty()}" class="text-gray-500">No reviews have been submitted yet. Be the first to review this product!</p>
 
+    <div class="flex justify-end items-center mb-4">
+        <label for="sort-by" class="text-sm font-medium text-gray-700 mr-2">Sort by:</label>
+        <select id="sort-by" onchange="redirectToSort(this.value)"
+                class="mt-1 block w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+
+            <option value="newest" th:selected="${currentSort == 'newest'}">Newest First</option>
+            <option value="helpful" th:selected="${currentSort == 'helpful'}">Most Helpful</option>
+            <option value="highest" th:selected="${currentSort == 'highest'}">Highest Rating</option>
+            <option value="lowest" th:selected="${currentSort == 'lowest'}">Lowest Rating</option>
+        </select>
+    </div>
+
     <div th:each="review : ${reviews}" class="bg-white p-6 rounded-lg shadow-md mb-4 border border-gray-200">
         <div class="flex items-center justify-between mb-2">
             <div class="flex items-center">
@@ -87,6 +99,21 @@
         </p>
 
         <p class="text-gray-700 mb-3" th:text="${review.comment}">Review comment goes here.</p>
+
+        <div class="flex items-center justify-between mt-4 border-t pt-3">
+    <span class="text-sm text-gray-600">
+        <span th:text="${review.helpfulVotes}">0</span> people found this helpful
+    </span>
+
+            <form th:action="@{/products/reviews/vote/{reviewId}(reviewId=${review.id})}" method="post">
+                <input type="hidden" name="productId" th:value="${product.id}">
+                <input type="hidden" name="sort" th:value="${currentSort}">
+
+                <button type="submit" class="text-xs px-3 py-1 bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 transition duration-150">
+                    Yes, this was helpful
+                </button>
+            </form>
+        </div>
 
         <div th:if="${review.imagePath}">
             <img th:src="@{${review.imagePath}}" alt="Review Image" class="max-w-xs h-auto object-cover rounded-lg border my-2">
@@ -134,5 +161,16 @@
         </form>
     </section>
 </main>
+
+<script th:inline="javascript">
+    /* Get the base URL (resolved by Thymeleaf) for the current product page.
+       The sort parameter is stripped by this mechanism. */
+    var baseUrl = /*[[@{/products/{id}(id=${product.id})}]]*/ '/products/1';
+
+    function redirectToSort(sortValue) {
+        // Construct the new URL by appending the sort query parameter
+        window.location.href = baseUrl + '?sort=' + sortValue;
+    }
+</script>
 </body>
 </html>

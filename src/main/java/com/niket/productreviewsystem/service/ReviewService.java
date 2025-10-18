@@ -1,16 +1,15 @@
 package com.niket.productreviewsystem.service;
 
+import com.niket.productreviewsystem.model.*;
 import com.niket.productreviewsystem.model.Review;
-import com.niket.productreviewsystem.model.Product;
-import com.niket.productreviewsystem.model.Review;
-import com.niket.productreviewsystem.model.ReviewFormDTO;
-import com.niket.productreviewsystem.model.User;
 import com.niket.productreviewsystem.repository.ProductRepository;
 import com.niket.productreviewsystem.repository.ReviewRepository;
+import com.niket.productreviewsystem.repository.ReviewVoteRepository;
 import com.niket.productreviewsystem.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -20,6 +19,8 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
+import java.util.Comparator;
+import java.util.Collections;
 
 @Service
 public class ReviewService {
@@ -32,6 +33,9 @@ public class ReviewService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ReviewVoteRepository voteRepository;
 
     // Define the base path for local file storage (inside static/uploads)
     private final Path uploadDir = Paths.get("src/main/resources/static/uploads");
@@ -89,24 +93,34 @@ public class ReviewService {
         reviewRepository.save(review);
     }
 
-    public List<Review> getReviewsByProductId(Long productId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+    public List<Review> getReviewsByProductId(Long productId, String sortOrder) {
 
-        List<Review> reviews = product.getReviews();
-        // Sort reviews by date descending (newest first)
-        reviews.sort((r1, r2) -> r2.getReviewDate().compareTo(r1.getReviewDate()));
+        if (sortOrder == null) {
+            sortOrder = "newest";
+        }
 
-        return reviews;
+        // Use repository methods for sorting
+        switch (sortOrder.toLowerCase()) {
+            case "highest":
+                return reviewRepository.findByProductIdOrderByRatingDesc(productId);
+            case "lowest":
+                return reviewRepository.findByProductIdOrderByRatingAsc(productId);
+            case "helpful":
+                return reviewRepository.findByProductIdOrderByHelpfulVotesDesc(productId);
+            case "newest":
+            default:
+                // Default to newest first
+                return reviewRepository.findByProductIdOrderByReviewDateDesc(productId);
+        }
     }
 
     /**
      * Calculates the average rating for a product.
      */
     public double getAverageRating(Long productId) {
-        // Use repository method for efficient count/average calculation in a large system
-        // For now, rely on fetched list to simplify (or we could use JPA query method below)
-        List<Review> reviews = getReviewsByProductId(productId);
+        // Use the simple fetch method to get all reviews for calculation
+        List<Review> reviews = reviewRepository.findByProductId(productId);
+
         if (reviews.isEmpty()) {
             return 0.0;
         }
@@ -121,5 +135,33 @@ public class ReviewService {
      */
     public long getReviewCount(Long productId) {
         return reviewRepository.countByProductId(productId);
+    }
+
+    @Transactional
+    public void addHelpfulVote(Long reviewId) {
+        // 1. Get current authenticated user
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found or not logged in."));
+
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found for voting."));
+
+        // 2. CHECK: Has this user already voted on this review?
+        if (voteRepository.findByUserIdAndReviewId(user.getId(), reviewId).isPresent()) {
+            throw new RuntimeException("You have already marked this review as helpful.");
+        }
+
+        // 3. ACTION: Record the vote and update the count
+
+        // Save the vote record (This ensures the unique constraint is hit on a second attempt)
+        ReviewVote vote = new ReviewVote();
+        vote.setUser(user);
+        vote.setReview(review);
+        voteRepository.save(vote);
+
+        // Atomically increment the vote count on the Review entity
+        review.setHelpfulVotes(review.getHelpfulVotes() + 1);
+        reviewRepository.save(review);
     }
 }
