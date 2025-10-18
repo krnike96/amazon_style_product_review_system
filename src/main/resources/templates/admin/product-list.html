@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Product Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+
+<header class="bg-red-600 shadow-md">
+    <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+        <a th:href="@{/products}" class="text-xl font-bold text-white">ReviewSystem (Admin)</a>
+        <div class="flex items-center space-x-4">
+            <a th:href="@{/admin/reviews}" class="text-white hover:text-gray-200">Review Moderation</a>
+            <a th:href="@{/products}" class="text-white hover:text-gray-200">View Public Site</a>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-medium py-1 px-3 rounded transition duration-150">Logout</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container mx-auto px-6 py-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-6">Product Management</h1>
+
+    <div class="mb-6 flex justify-between items-center">
+        <a th:href="@{/admin/products/form}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+            Add New Product
+        </a>
+    </div>
+
+    <div th:if="${successMessage}" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4" role="alert">
+        <p th:text="${successMessage}"></p>
+    </div>
+    <div th:if="${errorMessage}" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <div th:if="${products.isEmpty()}" class="bg-white p-6 rounded-lg shadow-md">
+        <p class="text-gray-500">No products found.</p>
+    </div>
+
+    <div th:unless="${products.isEmpty()}" class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+            <tr th:each="product : ${products}">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" th:text="${product.id}">1</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <img th:if="${product.imagePath}" th:src="@{${product.imagePath}}" alt="Product Image" class="h-10 w-10 object-cover rounded-md">
+                    <span th:unless="${product.imagePath}" class="text-gray-400">No Image</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" th:text="${product.name}">Product Name</td>
+                <td class="px-6 py-4 text-sm text-gray-500 max-w-lg overflow-hidden truncate" th:text="${product.description}">Product Description...</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <a th:href="@{/admin/products/form(id=${product.id})}" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>
+                    <form th:action="@{/admin/products/delete/{id}(id=${product.id})}" method="post" class="inline-block"
+                          onsubmit="return confirm('WARNING: Deleting this product will remove all associated reviews. Are you sure?')">
+                        <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
