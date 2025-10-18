@@ -12,6 +12,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -35,13 +36,16 @@ public class ProductController {
 
     // New: Handles GET request for a single product page
     @GetMapping("/{productId}")
-    public String showProductDetails(@PathVariable Long productId, Model model) {
+    public String showProductDetails(@PathVariable Long productId,
+                                     @RequestParam(required = false, defaultValue = "newest") String sort, // NEW PARAM
+                                     Model model) {
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // 1. Fetch data from service
-        List<Review> reviews = reviewService.getReviewsByProductId(productId);
-        double averageRating = reviewService.getAverageRating(productId);
+        // 1. Fetch data from service using the sort parameter
+        List<Review> reviews = reviewService.getReviewsByProductId(productId, sort); // MODIFIED CALL
+        double averageRating = reviewService.getAverageRating(productId); // (Uses old method without sort)
         long reviewCount = reviews.size();
 
         // 2. Add data to model
@@ -49,6 +53,7 @@ public class ProductController {
         model.addAttribute("reviews", reviews);
         model.addAttribute("averageRating", averageRating);
         model.addAttribute("reviewCount", reviewCount);
+        model.addAttribute("currentSort", sort); // Pass the current sort order to the UI
 
         // 3. Prepare DTO for form submission
         if (!model.containsAttribute("reviewFormDTO")) {
@@ -84,5 +89,20 @@ public class ProductController {
         }
 
         return "redirect:/products/" + productId;
+    }
+
+    @PostMapping("/reviews/vote/{reviewId}")
+    public String voteHelpful(@PathVariable Long reviewId,
+                              @RequestParam Long productId, // Need product ID to redirect back
+                              @RequestParam(required = false, defaultValue = "newest") String sort, // Retain sort order
+                              RedirectAttributes redirectAttributes) {
+        try {
+            reviewService.addHelpfulVote(reviewId);
+            redirectAttributes.addFlashAttribute("successMessage", "Vote recorded. Thank you!");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        // Redirect back to the product detail page, retaining the sort order
+        return "redirect:/products/" + productId + "?sort=" + sort;
     }
 }
