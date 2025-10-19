@@ -1,0 +1,17 @@
+/*
+ * Minimal placeholder CSS to satisfy the application
+ * and prevent the NoResourceFoundException.
+ * Add your actual styles here later.
+ */
+body {
+    font-family: Arial, sans-serif;
+    padding-top: 20px;
+}
+/* You can add basic styling for buttons/forms here if needed */
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+}
