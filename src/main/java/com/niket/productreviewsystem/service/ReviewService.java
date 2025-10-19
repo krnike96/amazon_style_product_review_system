@@ -7,10 +7,13 @@ import com.niket.productreviewsystem.repository.ReviewRepository;
 import com.niket.productreviewsystem.repository.ReviewVoteRepository;
 import com.niket.productreviewsystem.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -19,12 +22,13 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
-import java.util.Comparator;
-import java.util.Collections;
 
 @Service
 public class ReviewService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
+
+    // Dependencies injected via @Autowired fields
     @Autowired
     private ReviewRepository reviewRepository;
 
@@ -37,14 +41,23 @@ public class ReviewService {
     @Autowired
     private ReviewVoteRepository voteRepository;
 
-    // Define the base path for local file storage (inside static/uploads)
-    private final Path uploadDir = Paths.get("src/main/resources/static/uploads");
+    // The root path where files are physically saved, initialized via constructor
+    private final Path uploadRootPath;
 
-    public ReviewService() {
+    /**
+     * Constructor for ReviewService, used to initialize the upload directory path.
+     * The path string is injected using @Value from application.properties.
+     */
+    public ReviewService(@Value("${review.upload.dir}") String uploadDirStr) {
+        // Paths.get() with a relative path resolves it against the application's CWD (which is the module root).
+        this.uploadRootPath = Paths.get(uploadDirStr).normalize();
+
         try {
             // Ensure the upload directory exists upon service initialization
-            Files.createDirectories(uploadDir);
+            Files.createDirectories(this.uploadRootPath);
+            logger.info("Upload directory initialized successfully at: {}", this.uploadRootPath.toAbsolutePath());
         } catch (IOException e) {
+            logger.error("Could not initialize upload directory: {}", this.uploadRootPath.toAbsolutePath(), e);
             throw new RuntimeException("Could not initialize upload directory", e);
         }
     }
@@ -65,7 +78,6 @@ public class ReviewService {
         review.setRating(dto.getRating());
         review.setComment(dto.getComment());
         review.setReviewDate(LocalDateTime.now());
-        // For simplicity, we assume all reviews posted are "verified" in this initial build
         review.setVerifiedPurchase(true);
 
         // 3. Handle file upload (local storage)
@@ -74,17 +86,22 @@ public class ReviewService {
             try {
                 // Generate unique file name
                 String originalFilename = imageFile.getOriginalFilename();
-                String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                String fileExtension = "";
+                if (originalFilename != null && originalFilename.lastIndexOf(".") != -1) {
+                    fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                }
+
                 String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
 
-                // Save the file locally
-                Path filePath = this.uploadDir.resolve(uniqueFileName);
+                // Save the file locally to the path resolved against the CWD
+                Path filePath = this.uploadRootPath.resolve(uniqueFileName);
                 Files.copy(imageFile.getInputStream(), filePath);
+                logger.info("Saved file successfully to: {}", filePath.toAbsolutePath());
 
-                // Store the relative path in the database
+                // Store the public URL path in the database.
                 review.setImagePath("/uploads/" + uniqueFileName);
             } catch (IOException e) {
-                // Good error handling: if file upload fails, log it and throw a user-friendly error
+                logger.error("Failed to upload image for review.", e);
                 throw new RuntimeException("Failed to upload image: " + e.getMessage());
             }
         }
