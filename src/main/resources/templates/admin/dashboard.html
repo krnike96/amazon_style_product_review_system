@@ -5,18 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Review Moderation</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body class="bg-gray-100">
 
-<header class="bg-red-600 shadow-md">
-    <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
-        <a th:href="@{/products}" class="text-xl font-bold text-white">ReviewSystem (Admin)</a>
+<header class="bg-gray-800 shadow-xl">
+    <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+        <a th:href="@{/products}" class="text-xl font-bold text-white tracking-wider">ReviewSystem <span class="text-red-400">(Admin)</span></a>
         <div class="flex items-center space-x-4">
-            <span sec:authentication="name" class="text-white font-medium"></span>
-            <a th:href="@{/admin/reports}" class="text-white hover:text-gray-200">Pending Reports</a>
-            <a th:href="@{/admin/reviews}" class="text-white hover:text-gray-200">Review Moderation</a>
-            <a th:href="@{/admin/products}" class="text-white hover:text-gray-200">Product Management</a>
-            <a th:href="@{/products}" class="text-white hover:text-gray-200">View Public Site</a>
+            <span sec:authentication="name" class="text-gray-300 font-medium hidden sm:inline"></span>
+            <a th:href="@{/admin/reports}" class="text-gray-200 hover:text-white transition duration-150 py-1 px-2 rounded-lg hover:bg-gray-700">Pending Reports</a>
+            <a th:href="@{/admin/reviews}" class="text-white bg-red-600 hover:bg-red-700 py-1 px-2 rounded-lg transition duration-150">Review Moderation</a>
+            <a th:href="@{/admin/products}" class="text-gray-200 hover:text-white transition duration-150 py-1 px-2 rounded-lg hover:bg-gray-700">Product Management</a>
+            <a th:href="@{/products}" class="text-white bg-blue-600 hover:bg-blue-700 font-medium py-1 px-3 rounded transition duration-150">View Public Site</a>
             <form th:action="@{/logout}" method="post">
                 <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-medium py-1 px-3 rounded transition duration-150">Logout</button>
             </form>
@@ -24,51 +25,51 @@
     </nav>
 </header>
 
-<main class="container mx-auto px-6 py-8">
-    <h1 class="text-3xl font-extrabold text-gray-800 mb-6">Review Moderation Dashboard</h1>
+<main class="container mx-auto px-6 py-10">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2">Review Moderation Dashboard</h1>
 
-    <div th:if="${successMessage}" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4" role="alert">
+    <div th:if="${successMessage}" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-lg" role="alert">
         <p th:text="${successMessage}"></p>
     </div>
-    <div th:if="${errorMessage}" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+    <div th:if="${errorMessage}" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg" role="alert">
         <p th:text="${errorMessage}"></p>
     </div>
 
-    <div th:if="${reviews.isEmpty()}" class="bg-white p-6 rounded-lg shadow-md">
+    <div th:if="${reviews.isEmpty()}" class="bg-white p-6 rounded-xl shadow-md">
         <p class="text-gray-500">No reviews found to moderate.</p>
     </div>
 
-    <div th:unless="${reviews.isEmpty()}" class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+    <div th:unless="${reviews.isEmpty()}" class="bg-white p-6 rounded-xl shadow-2xl overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
             <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comment</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image?</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">User</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rating</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Comment</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image?</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
             </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-            <tr th:each="review : ${reviews}">
+            <tr th:each="review : ${reviews}" class="hover:bg-gray-50 transition duration-100">
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" th:text="${review.id}">1</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" th:text="${review.product.name}">Echo Dot</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" th:text="${review.user.username}">testuser</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-500" th:text="${review.rating}">5</td>
-                <td class="px-6 py-4 text-sm text-gray-500 max-w-sm overflow-hidden truncate" th:text="${review.comment}">A detailed review comment...</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" th:text="${review.product.name}">Echo Dot</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700" th:text="${review.user.username}">testuser</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-500 font-bold" th:text="${review.rating}">5</td>
+                <td class="px-6 py-4 text-sm text-gray-600 max-w-sm overflow-hidden truncate" th:text="${review.comment}">A detailed review comment...</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <span th:if="${review.imagePath}" class="text-green-600">Yes</span>
+                    <span th:if="${review.imagePath}" class="text-green-600 font-medium">Yes</span>
                     <span th:unless="${review.imagePath}" class="text-red-400">No</span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                     <form th:action="@{/admin/reviews/approve/{id}(id=${review.id})}" method="post" class="inline-block">
-                        <button type="submit" class="text-green-600 hover:text-green-900 mr-2">Approve</button>
+                        <button type="submit" class="text-green-600 hover:text-green-800 transition duration-150">Approve</button>
                     </form>
                     <form th:action="@{/admin/reviews/reject/{id}(id=${review.id})}" method="post" class="inline-block"
                           onsubmit="return confirm('Are you sure you want to permanently delete this review?')">
-                        <button type="submit" class="text-red-600 hover:text-red-900">Reject</button>
+                        <button type="submit" class="text-red-600 hover:text-red-800 transition duration-150">Reject</button>
                     </form>
                 </td>
             </tr>

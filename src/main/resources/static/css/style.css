@@ -1,17 +1,25 @@
-/*
- * Minimal placeholder CSS to satisfy the application
- * and prevent the NoResourceFoundException.
- * Add your actual styles here later.
- */
-body {
-    font-family: Arial, sans-serif;
-    padding-top: 20px;
+/* Custom styles not covered by Tailwind CSS. */
+
+/* Star Rating System */
+.star-rating {
+    /* Use flex-direction: row-reverse to make CSS star selectors easier to manage */
+    display: inline-flex;
+    flex-direction: row-reverse;
 }
-/* You can add basic styling for buttons/forms here if needed */
-.btn-primary {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
+.star-rating input {
+    /* Hide the default radio inputs */
+    display: none;
+}
+.star-rating label {
+    font-size: 2rem;
+    color: #ccc;
+    cursor: pointer;
+    padding: 0 0.1rem;
+    transition: color 0.2s;
+}
+/* Style for selected, hover, and checked state */
+.star-rating input:checked ~ label,
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+    color: #f7b731; /* Amber color for selected/hovered stars */
 }

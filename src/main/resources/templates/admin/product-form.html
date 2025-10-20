@@ -5,14 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${(product.id == null ? 'Create' : 'Edit') + ' Product'}"></title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body class="bg-gray-100">
 
-<header class="bg-red-600 shadow-md">
-    <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
-        <a th:href="@{/products}" class="text-xl font-bold text-white">ReviewSystem (Admin)</a>
+<header class="bg-gray-800 shadow-xl">
+    <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+        <a th:href="@{/products}" class="text-xl font-bold text-white tracking-wider">ReviewSystem <span class="text-red-400">(Admin)</span></a>
         <div class="flex items-center space-x-4">
-            <a th:href="@{/admin/products}" class="text-white hover:text-gray-200">Product List</a>
+            <a th:href="@{/admin/reviews}" class="text-gray-200 hover:text-white transition duration-150 py-1 px-2 rounded-lg hover:bg-gray-700">Dashboard</a>
+            <a th:href="@{/admin/products}" class="text-gray-200 hover:text-white transition duration-150 py-1 px-2 rounded-lg hover:bg-gray-700">Product List</a>
             <form th:action="@{/logout}" method="post">
                 <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-medium py-1 px-3 rounded transition duration-150">Logout</button>
             </form>
@@ -20,42 +22,43 @@
     </nav>
 </header>
 
-<main class="container mx-auto px-6 py-8">
-    <h1 class="text-3xl font-extrabold text-gray-800 mb-6" th:text="${(product.id == null ? 'Create New' : 'Edit') + ' Product'}">Create New Product</h1>
+<main class="container mx-auto px-6 py-10">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2" th:text="${(product.id == null ? 'Create New' : 'Edit') + ' Product'}">Create New Product</h1>
 
-    <div class="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-3xl mx-auto border-t-4 border-blue-500">
 
-        <form th:action="@{/admin/products/save}" method="post" th:object="${product}" enctype="multipart/form-data">
+        <form th:action="@{/admin/products/save}" method="post" th:object="${product}" enctype="multipart/form-data" class="space-y-6">
 
             <input type="hidden" th:field="*{id}">
 
             <div class="mb-4">
                 <label for="name" class="block text-gray-700 text-sm font-bold mb-2">Product Name</label>
                 <input type="text" id="name" th:field="*{name}" placeholder="e.g., Echo Dot (5th Gen)" required
-                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 transition duration-150">
             </div>
 
             <div class="mb-4">
                 <label for="description" class="block text-gray-700 text-sm font-bold mb-2">Description</label>
-                <textarea id="description" th:field="*{description}" rows="4" placeholder="Full product details..." required
-                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <textarea id="description" th:field="*{description}" rows="6" placeholder="Full product details..." required
+                          class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 transition duration-150"></textarea>
             </div>
 
-            <div class="mb-6">
+            <div class="mb-6 border-t pt-6">
                 <label for="file" class="block text-gray-700 text-sm font-bold mb-2">Product Image (Optional)</label>
                 <input type="file" id="file" name="file" accept="image/*"
-                       class="w-full text-gray-700">
-                <p th:if="*{imagePath}" class="text-sm text-gray-600 mt-2">
-                    Current Image: <a th:href="*{imagePath}" target="_blank" class="text-blue-500 hover:underline">View</a>
+                       class="w-full text-gray-700 border p-2 rounded bg-gray-50">
+                <p th:if="*{imagePath}" class="text-sm text-gray-600 mt-2 flex items-center">
+                    Current Image:
+                    <a th:href="@{${product.imagePath}}" target="_blank" class="text-blue-500 hover:underline ml-2">View</a>
                     (Upload a new file to replace)
                 </p>
             </div>
 
-            <div class="flex items-center justify-between">
-                <a th:href="@{/admin/products}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded transition duration-150">
+            <div class="flex items-center justify-between pt-4 border-t">
+                <a th:href="@{/admin/products}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded transition duration-150 shadow-md">
                     Cancel
                 </a>
-                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 shadow-lg">
                     Save Product
                 </button>
             </div>

@@ -1,13 +1,16 @@
 package com.niket.productreviewsystem.service;
 
 import com.niket.productreviewsystem.model.*;
-import com.niket.productreviewsystem.model.Review;
 import com.niket.productreviewsystem.repository.ProductRepository;
 import com.niket.productreviewsystem.repository.ReviewRepository;
 import com.niket.productreviewsystem.repository.ReviewVoteRepository;
 import com.niket.productreviewsystem.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort; // NEW IMPORT
+import org.springframework.data.domain.PageRequest; // NEW IMPORT
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ReviewService {
@@ -49,11 +53,9 @@ public class ReviewService {
      * The path string is injected using @Value from application.properties.
      */
     public ReviewService(@Value("${review.upload.dir}") String uploadDirStr) {
-        // Paths.get() with a relative path resolves it against the application's CWD (which is the module root).
         this.uploadRootPath = Paths.get(uploadDirStr).normalize();
 
         try {
-            // Ensure the upload directory exists upon service initialization
             Files.createDirectories(this.uploadRootPath);
             logger.info("Upload directory initialized successfully at: {}", this.uploadRootPath.toAbsolutePath());
         } catch (IOException e) {
@@ -71,6 +73,11 @@ public class ReviewService {
         // 2. Get the product
         var product = productRepository.findById(dto.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        // Check if the user has already reviewed this product
+        if (reviewRepository.existsByUserIdAndProductId(user.getId(), product.getId())) {
+            throw new RuntimeException("You have already submitted a review for this product.");
+        }
 
         Review review = new Review();
         review.setProduct(product);
@@ -110,32 +117,52 @@ public class ReviewService {
         reviewRepository.save(review);
     }
 
-    public List<Review> getReviewsByProductId(Long productId, String sortOrder) {
+    // --- NEW METHOD FOR PAGINATION (Replaces getReviewsByProductId) ---
+    /**
+     * Retrieves paginated and sorted reviews for a given product ID.
+     */
+    public Page<Review> getPaginatedReviewsByProductId(Long productId, String sortOrder, Pageable pageable) {
 
-        if (sortOrder == null) {
-            sortOrder = "newest";
-        }
-
-        // Use repository methods for sorting
+        Sort customSort;
+        // 1. Determine the Sort object based on the custom 'sortOrder' string
         switch (sortOrder.toLowerCase()) {
             case "highest":
-                return reviewRepository.findByProductIdOrderByRatingDesc(productId);
+                customSort = Sort.by("rating").descending();
+                break;
             case "lowest":
-                return reviewRepository.findByProductIdOrderByRatingAsc(productId);
+                customSort = Sort.by("rating").ascending();
+                break;
             case "helpful":
-                return reviewRepository.findByProductIdOrderByHelpfulVotesDesc(productId);
+                customSort = Sort.by("helpfulVotes").descending();
+                break;
             case "newest":
             default:
                 // Default to newest first
-                return reviewRepository.findByProductIdOrderByReviewDateDesc(productId);
+                customSort = Sort.by("reviewDate").descending();
+                break;
         }
+
+        // 2. Create a new Pageable instance that includes the custom sorting.
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                customSort
+        );
+
+        // 3. Call the repository method (requires you to define a standard JpaRepository method:
+        // Page<Review> findByProductId(Long productId, Pageable pageable); in ReviewRepository)
+        return reviewRepository.findByProductId(productId, sortedPageable);
     }
+
+    // NOTE: The old 'getReviewsByProductId' method is removed as it's no longer used
+    // and its logic is now inside 'getPaginatedReviewsByProductId'.
+
 
     /**
      * Calculates the average rating for a product.
      */
     public double getAverageRating(Long productId) {
-        // Use the simple fetch method to get all reviews for calculation
+        // Use the simple fetch method to get all reviews for calculation (no pagination needed here)
         List<Review> reviews = reviewRepository.findByProductId(productId);
 
         if (reviews.isEmpty()) {
@@ -154,8 +181,9 @@ public class ReviewService {
         return reviewRepository.countByProductId(productId);
     }
 
+    // --- REPLACING addHelpfulVote with the new, robust addVote method ---
     @Transactional
-    public void addHelpfulVote(Long reviewId) {
+    public void addVote(Long reviewId, String type) {
         // 1. Get current authenticated user
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
@@ -164,21 +192,35 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found for voting."));
 
-        // 2. CHECK: Has this user already voted on this review?
-        if (voteRepository.findByUserIdAndReviewId(user.getId(), reviewId).isPresent()) {
-            throw new RuntimeException("You have already marked this review as helpful.");
+        Optional<ReviewVote> existingVote = voteRepository.findByUserIdAndReviewId(user.getId(), reviewId);
+
+        if (type.equalsIgnoreCase("UP")) {
+            if (existingVote.isPresent()) {
+                throw new RuntimeException("You have already marked this review as helpful.");
+            }
+            // 2. ACTION: Record the vote and update the count
+            ReviewVote vote = new ReviewVote();
+            vote.setUser(user);
+            vote.setReview(review);
+            voteRepository.save(vote);
+
+            // Atomically increment the vote count on the Review entity
+            review.setHelpfulVotes(review.getHelpfulVotes() + 1);
+            reviewRepository.save(review);
+        } else if (type.equalsIgnoreCase("DOWN")) {
+            if (existingVote.isEmpty()) {
+                throw new RuntimeException("You have not marked this review as helpful to un-vote.");
+            }
+            // 2. ACTION: Remove the vote and decrement the count
+            voteRepository.delete(existingVote.get());
+
+            // Atomically decrement the vote count on the Review entity
+            if (review.getHelpfulVotes() > 0) {
+                review.setHelpfulVotes(review.getHelpfulVotes() - 1);
+                reviewRepository.save(review);
+            }
+        } else {
+            throw new IllegalArgumentException("Invalid vote type provided: " + type);
         }
-
-        // 3. ACTION: Record the vote and update the count
-
-        // Save the vote record (This ensures the unique constraint is hit on a second attempt)
-        ReviewVote vote = new ReviewVote();
-        vote.setUser(user);
-        vote.setReview(review);
-        voteRepository.save(vote);
-
-        // Atomically increment the vote count on the Review entity
-        review.setHelpfulVotes(review.getHelpfulVotes() + 1);
-        reviewRepository.save(review);
     }
 }

@@ -3,46 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <title>Register | Product Review System</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
-    <style>
-        body { background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .register-container { background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        .form-control { margin-bottom: 15px; }
-        .text-danger { color: #dc3545; font-size: 0.875em; }
-    </style>
 </head>
-<body>
-<div class="register-container">
-    <h2 class="text-center mb-4">Create New Account</h2>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
-    <form th:action="@{/register}" th:object="${user}" method="post">
+<div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+    <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Create New Account</h2>
+
+    <form th:action="@{/register}" th:object="${user}" method="post" class="space-y-5">
 
         <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" th:field="*{username}" class="form-control" required>
-            <p class="text-danger" th:if="${#fields.hasErrors('username')}" th:errors="*{username}">Username Error</p>
+            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <input type="text" id="username" th:field="*{username}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="Choose a unique username" required>
+            <p class="text-red-500 text-sm mt-1" th:if="${#fields.hasErrors('username')}" th:errors="*{username}">Username Error</p>
         </div>
 
         <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" th:field="*{email}" class="form-control" required>
-            <p class="text-danger" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Email Error</p>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" id="email" th:field="*{email}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="you@example.com" required>
+            <p class="text-red-500 text-sm mt-1" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Email Error</p>
         </div>
 
         <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" th:field="*{password}" class="form-control" required>
-            <p class="text-danger" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">Password Error</p>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input type="password" id="password" th:field="*{password}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="Must be at least 6 characters" required>
+            <p class="text-red-500 text-sm mt-1" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">Password Error</p>
         </div>
 
-        <button type="submit" class="btn btn-success btn-block" style="width: 100%;">Register</button>
+        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-150 shadow-md mt-6">
+            Register Account
+        </button>
     </form>
 
-    <hr>
-
-    <div class="text-center mt-3">
-        <p>Already have an account? <a th:href="@{/login}">Log in here</a></p>
-    </div>
+    <p class="text-center text-sm text-gray-500 mt-6">
+        Already have an account? <a th:href="@{/login}" class="text-blue-600 hover:text-blue-800 transition duration-150">Log In here</a>
+    </p>
 </div>
 </body>
 </html>

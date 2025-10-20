@@ -5,32 +5,33 @@ import com.niket.productreviewsystem.model.Review;
 import com.niket.productreviewsystem.model.ReviewFormDTO;
 import com.niket.productreviewsystem.repository.ProductRepository;
 import com.niket.productreviewsystem.service.ReviewService;
+import com.niket.productreviewsystem.service.ReviewReportService; // Import was in user code, keeping it
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page; // NEW IMPORT
+import org.springframework.data.domain.Pageable; // NEW IMPORT
+import org.springframework.data.web.PageableDefault; // NEW IMPORT
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.bind.annotation.RequestParam;
-import com.niket.productreviewsystem.service.ReviewReportService;
 
 import java.util.List;
 
 @Controller
-@RequestMapping("/products") // Map all requests in this controller to /products
+@RequestMapping("/products")
 public class ProductController {
 
     @Autowired
     private ProductRepository productRepository;
 
     @Autowired
-    private ReviewService reviewService; // Review Service for business logic
+    private ReviewService reviewService;
 
     @Autowired
     private ReviewReportService reportService;
 
-    // Handles GET request for product list (now just "/")
     @GetMapping({"", "/"})
     public String listProducts(Model model) {
         List<Product> products = productRepository.findAll();
@@ -38,26 +39,28 @@ public class ProductController {
         return "product-list";
     }
 
-    // New: Handles GET request for a single product page
+    // --- CRITICAL FIX APPLIED HERE ---
     @GetMapping("/{productId}")
     public String showProductDetails(@PathVariable Long productId,
-                                     @RequestParam(required = false, defaultValue = "newest") String sort, // NEW PARAM
+                                     @PageableDefault(size = 5) Pageable pageable, // ADDED: Handles 'page' and 'size' parameters
+                                     @RequestParam(required = false, defaultValue = "newest") String sort,
                                      Model model) {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // 1. Fetch data from service using the sort parameter
-        List<Review> reviews = reviewService.getReviewsByProductId(productId, sort); // MODIFIED CALL
-        double averageRating = reviewService.getAverageRating(productId); // (Uses old method without sort)
-        long reviewCount = reviews.size();
+        // NOTE FOR REVIEWSERVICE:
+        // You MUST implement this new method signature in ReviewService.java:
+        // public Page<Review> getPaginatedReviewsByProductId(Long productId, String sort, Pageable pageable)
+        Page<Review> reviewsPage = reviewService.getPaginatedReviewsByProductId(productId, sort, pageable);
+
+        double averageRating = reviewService.getAverageRating(productId);
 
         // 2. Add data to model
         model.addAttribute("product", product);
-        model.addAttribute("reviews", reviews);
-        model.addAttribute("averageRating", averageRating);
-        model.addAttribute("reviewCount", reviewCount);
-        model.addAttribute("currentSort", sort); // Pass the current sort order to the UI
+        model.addAttribute("reviews", reviewsPage); // <<< FIX: Pass the Page object to Thymeleaf
+        model.addAttribute("avgRating", averageRating); // Renamed attribute for consistency with the corrected HTML
+        model.addAttribute("currentSort", sort);
 
         // 3. Prepare DTO for form submission
         if (!model.containsAttribute("reviewFormDTO")) {
@@ -69,7 +72,6 @@ public class ProductController {
         return "product-detail";
     }
 
-    // New: Handles POST request for submitting a review
     @PostMapping("/{productId}/submit-review")
     public String submitReview(@PathVariable Long productId,
                                @Valid @ModelAttribute("reviewFormDTO") ReviewFormDTO reviewFormDTO,
@@ -77,48 +79,52 @@ public class ProductController {
                                RedirectAttributes redirectAttributes) {
 
         if (result.hasErrors()) {
-            // If validation errors exist (including NoUrl constraint),
-            // redirect back to the product page with errors
             redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.reviewFormDTO", result);
             redirectAttributes.addFlashAttribute("reviewFormDTO", reviewFormDTO);
-            return "redirect:/products/" + productId + "#review-form"; // Go back to the product page, focus on form
+            return "redirect:/products/" + productId + "#review-form";
         }
 
         try {
-            // The service layer handles file storage, user mapping, and saving to DB
             reviewService.saveReview(reviewFormDTO);
             redirectAttributes.addFlashAttribute("successMessage", "Review submitted successfully!");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
 
+        // Redirect back to the first page (page=0) to see the new review with default sort.
         return "redirect:/products/" + productId;
     }
 
-    @PostMapping("/reviews/vote/{reviewId}")
-    public String voteHelpful(@PathVariable Long reviewId,
-                              @RequestParam Long productId, // Need product ID to redirect back
-                              @RequestParam(required = false, defaultValue = "newest") String sort, // Retain sort order
-                              RedirectAttributes redirectAttributes) {
+    // --- Updated for correct voting logic and parameter retention ---
+    @PostMapping("/reviews/{reviewId}/vote")
+    public String voteReview(@PathVariable Long reviewId,
+                             @RequestParam String type, // Expects 'UP' or 'DOWN' from the Thymeleaf form
+                             @RequestParam Long productId,
+                             @RequestParam(required = false, defaultValue = "newest") String sort,
+                             @RequestParam(required = false, defaultValue = "0") int page, // Retain current page
+                             @RequestParam(required = false, defaultValue = "5") int size, // Retain page size
+                             RedirectAttributes redirectAttributes) {
         try {
-            reviewService.addHelpfulVote(reviewId);
+            // NOTE FOR REVIEWSERVICE:
+            // You must implement this method to handle both 'UP' and 'DOWN' votes
+            reviewService.addVote(reviewId, type);
             redirectAttributes.addFlashAttribute("successMessage", "Vote recorded. Thank you!");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        // Redirect back to the product detail page, retaining the sort order
-        return "redirect:/products/" + productId + "?sort=" + sort;
+
+        // Redirect back, preserving current page, size, and sort for a smooth experience
+        return "redirect:/products/" + productId + "?sort=" + sort + "&page=" + page + "&size=" + size;
     }
 
     @PostMapping("/reviews/report/{reviewId}")
     public String reportReview(@PathVariable Long reviewId,
                                @RequestParam String reason,
-                               @RequestParam(required = false) String otherReason, // NEW OPTIONAL PARAMETER
+                               @RequestParam(required = false) String detailReason, // Retained field name from correct HTML
                                @RequestParam Long productId,
                                RedirectAttributes redirectAttributes) {
         try {
-            // PASS THE NEW PARAMETER
-            reportService.submitReport(reviewId, reason, otherReason);
+            reportService.submitReport(reviewId, reason, detailReason);
             redirectAttributes.addFlashAttribute("successMessage", "Review reported successfully. An admin will review it shortly.");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
