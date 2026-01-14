@@ -116,3 +116,6 @@ For immediate testing, you can use the `/register` page to create accounts, or p
 | /products/{id} | Product detail page with all submitted reviews. | Public (Read) / Authenticated |
 | /admin/reviews | Review Approval/Rejection dashboard. | ROLE_ADMIN |
 | /admin/reports | Management of pending user reports. | ROLE_ADMIN |
+
+
+### End Of File
