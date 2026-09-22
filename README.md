@@ -1,4 +1,4 @@
-# 📦 Product Review System: Amazon-Style Product Review System
+# Product Review System: Amazon-Style Product Review System
 
 ## 🌟 Overview
 
